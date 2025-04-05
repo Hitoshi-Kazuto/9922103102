@@ -1,11 +1,16 @@
 import express from "express";
 import axios from "axios";
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+
+// Enable CORS for all routes
+app.use(cors());
+app.use(express.json());
 
 const PORT = process.env.PORT || 5173;
 const TEST_SERVER_BASE_URL = 'http://20.244.56.144/evaluation-service'; 
@@ -38,7 +43,6 @@ const postData = {
   popularPosts: [] 
 };
 
-
 async function initializeService() {
   try {
     await refreshData();
@@ -63,7 +67,6 @@ async function refreshData() {
       userData.userIds.add(user.id);
       const userPostsResponse = await fetchUserPosts(user.id);
       
-
       const userPosts = userPostsResponse.posts ? Object.entries(userPostsResponse.posts).map(([id, post]) => ({
         id,
         ...post
@@ -97,7 +100,7 @@ async function fetchUserPosts(userId) {
     return response.data;
   } catch (error) {
     console.error(`Error fetching posts for user ${userId}`, error.message);
-    return [];
+    return { posts: {} };
   }
 }
 
@@ -107,7 +110,7 @@ async function fetchPostComments(postId) {
     return response.data;
   } catch (error) {
     console.error(`Error fetching comments for post ${postId}`, error.message);
-    return [];
+    return { comments: {} };
   }
 }
 
@@ -155,7 +158,6 @@ async function processPosts(posts) {
   for (const batch of postBatches) {
     await Promise.all(batch.map(async (post) => {
       const commentsResponse = await fetchPostComments(post.id);
-
       const comments = commentsResponse.comments ? Object.entries(commentsResponse.comments).map(([id, comment]) => ({
         id,
         ...comment
@@ -163,6 +165,7 @@ async function processPosts(posts) {
       postData.postCommentCounts.set(post.id, comments.length);
     }));
   }
+  
   const maxCommentCount = Math.max(...postData.postCommentCounts.values(), 0);
   postData.popularPosts = posts.filter(post => 
     postData.postCommentCounts.get(post.id) === maxCommentCount
@@ -188,7 +191,6 @@ app.get('/posts', (req, res) => {
     return res.status(400).json({ error: 'Invalid type parameter. Use "latest" or "popular".' });
   }
 });
-
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
