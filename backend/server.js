@@ -1,14 +1,29 @@
 import express from "express";
 import axios from "axios";
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
 const app = express();
-
-
 
 const PORT = process.env.PORT || 5173;
 const TEST_SERVER_BASE_URL = 'http://20.244.56.144/evaluation-service'; 
-const REFRESH_INTERVAL = 1000000; 
-const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXBDbGFpbXMiOnsiZXhwIjoxNzQzODM2NDU2LCJpYXQiOjE3NDM4MzYxNTYsImlzcyI6IkFmZm9yZG1lZCIsImp0aSI6IjRjYTMwYmQ1LWQ2ZjUtNGJkMC1iMzBiLTRiNjQ3YTE5ZDVkMyIsInN1YiI6InNocmV5YXMuZGJnQGdtYWlsLmNvbSJ9LCJlbWFpbCI6InNocmV5YXMuZGJnQGdtYWlsLmNvbSIsIm5hbWUiOiJzaHJleWFzIiwicm9sbE5vIjoiOTkyMjEwMzEwMiIsImFjY2Vzc0NvZGUiOiJTck1RcVIiLCJjbGllbnRJRCI6IjRjYTMwYmQ1LWQ2ZjUtNGJkMC1iMzBiLTRiNjQ3YTE5ZDVkMyIsImNsaWVudFNlY3JldCI6IkJaREZCUGRqcFJyUEh5cGIifQ.8n4w9sFeD_yVipkaDmLmTOnte7GvHJFzCcsUPynJkew';
+const REFRESH_INTERVAL = 10000; 
+const AUTH_TOKEN = process.env.AUTH_TOKEN;
 
+if (!AUTH_TOKEN) {
+  console.error('AUTH_TOKEN is not set in environment variables');
+  process.exit(1);
+}
+
+// Create a default axios instance with the authorization header
+const api = axios.create({
+  baseURL: TEST_SERVER_BASE_URL,
+  headers: {
+    'Authorization': `Bearer ${AUTH_TOKEN}`
+  }
+});
 
 const userData = {
   userPostCounts: new Map(),
@@ -68,11 +83,7 @@ async function refreshData() {
 
 async function fetchUsers() {
   try {
-    const response = await axios.get(`${TEST_SERVER_BASE_URL}/users`, {
-      headers: {
-        'Authorization': `Bearer ${AUTH_TOKEN}`
-      }
-    });
+    const response = await api.get('/users');
     return response.data;
   } catch (error) {
     console.error('Error fetching users', error.message);
@@ -82,11 +93,7 @@ async function fetchUsers() {
 
 async function fetchUserPosts(userId) {
   try {
-    const response = await axios.get(`${TEST_SERVER_BASE_URL}/users/${userId}/posts`, {
-      headers: {
-        'Authorization': `Bearer ${AUTH_TOKEN}`
-      }
-    });
+    const response = await api.get(`/users/${userId}/posts`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching posts for user ${userId}`, error.message);
@@ -96,11 +103,7 @@ async function fetchUserPosts(userId) {
 
 async function fetchPostComments(postId) {
   try {
-    const response = await axios.get(`${TEST_SERVER_BASE_URL}/posts/${postId}/comments`, {
-      headers: {
-        'Authorization': `Bearer ${AUTH_TOKEN}`
-      }
-    });
+    const response = await api.get(`/posts/${postId}/comments`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching comments for post ${postId}`, error.message);
